@@ -1,0 +1,8 @@
+book_filename: "R fundamentals"
+chapter_name: ""
+repo: https://github.com/k-hench/r_fundamentals/
+output_dir: ./docs
+rmd_files: ["index.Rmd", "day1.Rmd"]
+clean: [packages.bib, bookdown.bbl]
+new_session: yes
+delete_merged_file: True

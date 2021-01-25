@@ -1,0 +1,1272 @@
+---
+title: "getting fancy with ggplot"
+author: "Kosmas Hench"
+date: '2020-04-09'
+output:
+  beamer_presentation: default
+  ioslides_presentation:
+    css: styles.css
+    logo: img/logo.svg
+    template: default.html
+    widescreen: yes
+    smaller: yes
+subtitle: at the ZMT data round table
+github: github.com/k-hench
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      comment = "#>",
+                      collapse = TRUE)
+# devtools::install_github("hadley/emo")
+library(gapminder)
+library(tidyverse)
+library(patchwork)
+library(cowplot)
+source('ggplotting_plots.R')
+```
+
+## Motivation {data-background=img/art_white.jpg data-background-size=cover}
+
+<div class="column2">
+Try to avoid <span style='font-style:italic'>suck</span> (`r emo::ji("poo")`) in your life:
+
+Plotting data is essential in science - any paper without a plot sucks, no exceptions! `r emo::ji("smile")`
+
+Having a paper rejected and spending hours manually adjusting a nice plot for resubmission (eg Fig.1 a $\rightarrow$ Fig.1 A) in Illustrator or powerpoint also sucks.
+
+Submitting figures you carefully crafted in Inkscape and being told that your <span style='font-style:italic'>tif</span> file is not compatible with the journal sucks hard!
+
+$\rightarrow$ Best to do everything <span style='font-style:italic'>in house</span>! `r emo::ji("smile")`
+
+```{r, eval = FALSE}
+install.packages("tidyverse")
+install.packages("gapminder")
+install.packages("devtools")
+```
+</div>
+
+<a href="https://rmarkdown.rstudio.com/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/rmarkdown.svg"></a>
+
+## {data-background=img/title.jpg data-background-size=cover}
+
+<div style='position:absolute; top:42%;left:0px; text-align:center; width:100%'>
+<h2 style='color:#FFFFFF; font-size: 80px;'>Basics</h2>
+</div>
+
+<div class="titler">
+```{r, eval = FALSE}
+library("tidyverse")
+library("gapminder")
+```
+</div>
+
+<a href="https://www.tidyverse.org/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/tidyverse.svg"></a>
+
+## Theory
+
+- {ggplot2} is based on the grammar of graphics, <span style='font-style:italic'>"the deep features that underlie all statistical graphics"</span> (Wilkinson).
+
+- The main idea is that plots are a <span style='font-style:italic'>"set of independent components that can be composed in many different ways"</span> (Wickham).
+
+<div><div class="column3">
+<center>
+```{r,echo = FALSE, fig.asp = 1, fig.width = 4, out.width = '100%'}
+p_gg_parts
+```
+</center>
+</div><div class="column66">
+- <span style='color:#4A7CA5FF'>data</span>: underlying raw data that we want to visualize
+- <span style='color:#75457BFF'>layers</span>: type of visualization (eg. "scatter" or "line plot")
+- <span style='color:#B86614FF'>scales</span>: representation/ transformation of the values (x, y, colot etc.)
+- <span style='color:#A62526FF'>coordinate system</span>: the applied coordinate system (eg. cartesian or polar)
+- <span style='color:#458443FF'>facets</span>: logical grouping of the data into subsets (<span style='font-style:italic'>"small multiples"</span>)
+- <span style='color:#6E6E0CFF'>theme</span>: the plot appearance (eg. layout, font, ...)
+</div></div>
+
+<a href="https://ggplot2.tidyverse.org/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/ggplot2.svg"></a>
+
+## Basics: <span style='color:#4A7CA5FF'>data</span>
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = "#366489FF", fill = '#366489FF'))
+update_geom_defaults("point",   list(colour = "#366489FF", fill = '#366489FF'))
+update_geom_defaults("line",   list(colour = "#366489FF", fill = '#366489FF'))
+theme_set(theme_new_clr('#366489FF'))
+```
+
+<div><div class="column2">
+- Classically {ggplot2}, assumes that your plot will contain (only) one data set (usually the first argument of `ggplot()`).<br><br>
+- This data needs to be stored within a tidy `data.frame` (or `tibble`). This means every row is a single observation with potentially several different variables (measurements).<br><br>
+- the function `fortify()` can be used to convert many data structures into tidy `data.frames`.
+</div><div class="column2b">
+
+```{r, eval = FALSE}
+ggplot(data = gapminder) # = ggplot(gapminder)
+```
+
+```{r}
+options(width = 80)
+head(gapminder, n = 3) %>%
+  select(country:lifeExp)
+
+lm(x ~ y,data = tibble(x = rnorm(4),
+                       y = rnorm(4))) %>%
+  fortify()  %>%
+  select(x:.sigma)
+```
+</div></div>
+
+
+<a href="https://github.com/jennybc/gapminder"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## Basics: <span style='color:#4A7CA5FF'>data</span>
+
+Initializing a ggplot with a `data.frame` will only produce an empty canvas though:
+
+<div><div class="column2">
+```{r, eval = FALSE}
+ggplot(data = gapminder,
+       mapping = aes(x = gdpPercap, y = lifeExp))
+
+# Equivalents:
+# ------------
+# ggplot(gapminder,
+#        aes(x = gdpPercap, y = lifeExp))
+#
+# gapminder %>%
+#   ggplot(aes(x = gdpPercap, y = lifeExp))
+```
+
+The `ggplot()` function intializes the plot and sets the default data and mapping for all layers.
+
+</div><div class="column2">
+```{r, echo = FALSE, fig.asp = 1, fig.width = 4, out.width='115%'}
+ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp))
+```
+</div></div>
+
+## Basics: <span style='color:#75457BFF'>layers</span>
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = "#75457BFF", fill = '#75457BFF'))
+update_geom_defaults("point",   list(colour = "#75457BFF", fill = '#75457BFF'))
+update_geom_defaults("line",   list(colour = "#75457BFF", fill = '#75457BFF'))
+theme_set(theme_new_clr('#75457BFF'))
+scale_fill_continuous <- new_fill_scale(clr = '#75457BFF')
+```
+<div class="code_ex">**geom_ ...**( <span style='color:#caa8ceff'>mapping</span> = <span style='color:#caa8ceff'>...</span>, <span style='color:#caa8ceff'>data</span> = <span style='color:#caa8ceff'>...</span>, color = ..., size = ..., ...)</div><br>
+
+<center><img src="img/icons/geoms4.svg" style="width:95%"></center>
+
+<br><br>
+Layer functions start with `geom_*` or `stat_*` and contain different representations of data:
+
+<div ><div class="column3">
+```{r, eval = FALSE}
+geom_point()
+geom_line()
+geom_path()
+geom_bar()
+geom_smooth()
+geom_text()
+```
+</div><div class="column3b">
+```{r, eval = FALSE}
+geom_density()
+geom_boxplot()
+geom_area()
+geom_histogram()
+geom_contour()
+geom_bin2d()
+```
+</div><div class="column3b">
+```{r, eval = FALSE}
+geom_segment()
+geom_rect()
+geom_abline()
+geom_hline()
+geom_polygon()
+# geom_ ...
+```
+</div></div>
+
+## Basics: <span style='color:#75457BFF'>layers</span>
+
+<div><div class="column2">
+
+`geom_ ...` functions typically create geometric representaions of the raw data.
+
+```{r,fig.asp = .8, fig.width = 4,  out.width = '90%'}
+ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_point()
+```
+</div>
+<div class="column2b">
+
+`stat_ ...` functions typically create statistical transforamtions.
+
+```{r,fig.asp = .8, fig.width = 4,  out.width = '90%'}
+gapminder %>%
+  ggplot(aes(x = continent))+
+  stat_count()
+```
+</div></div>
+
+## Basics: <span style='color:#75457BFF'>layers</span>
+
+<div><div class="column2">
+```{r, eval = FALSE}
+ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_point()
+```
+<center>
+```{r, echo = FALSE,fig.asp = .8, fig.width = 4,  out.width = '90%'}
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp))+geom_point()
+```
+</center>
+</div>
+<div class="column2b">
+```{r, eval = FALSE}
+ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_hex()
+```
+<center>
+```{r, echo = FALSE, fig.asp = .7, fig.width = 4, out.width = '110%'}
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp)) + geom_hex()
+```
+</center>
+</div></div>
+
+## Basics: <span style='color:#75457BFF'>layers</span>
+
+Several layers can be combined:
+
+```{r, eval = FALSE}
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp))+
+  geom_hex()+
+  geom_point(color = 'white')
+```
+<center>
+```{r, echo = FALSE, out.width = '67%'}
+ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_hex()+
+  geom_point(color = 'white')
+```
+</center>
+
+## Basics: <span style='color:#75457BFF'>layers</span>
+
+To switch of the default mapping for custom layers, use `inherit.aes = FALSE` :
+
+<div><div class="column2">
+```{r, eval = FALSE}
+data_text <- tibble(x = 60000,
+                    y = 30,
+                    label = 'point made!')
+
+data_point <- tibble(gdpPercap = 60000,
+                     lifeExp = 35)
+
+ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_point()+
+  geom_point(data = data_point,
+              color = 'red')+
+  geom_text(inherit.aes = FALSE,
+            data = data_text,
+            aes(x = x ,y = y ,
+                label = label))
+```
+</div>
+<div class="column2b">
+<center>
+```{r, echo = FALSE,fig.asp = 1, fig.width = 4, out.width = '120%'}
+data_text <- tibble(x = 60000,
+                    y = 30,
+                    label = 'point made!')
+
+data_point <- tibble(gdpPercap = 60000,
+                     lifeExp = 35)
+
+ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_point()+
+  geom_point(data = data_point,
+              color = 'red')+
+  geom_text(inherit.aes = FALSE,
+            data = data_text,
+            aes(x = x ,y = y ,
+                label = label),
+            size = 6)
+```
+</center>
+</div></div>
+
+## Basics: <span style='color:#B86614FF'>scales</span>
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = "#B86614FF", fill = '#B86614FF'))
+update_geom_defaults("point",   list(colour = "#B86614FF", fill = '#B86614FF'))
+update_geom_defaults("line",   list(colour = "#B86614FF", fill = '#B86614FF'))
+theme_set(theme_new_clr('#B86614FF'))
+```
+<div class="code_ex">**scale_ ...**(name = ..., <span style='color:#e6811eff'>breaks</span> = <span style='color:#e6811eff'>...</span>, <span style='color:#e6811eff'>values</span> = <span style='color:#e6811eff'>...</span>, <span style='color:#e6811eff'>labels</span> = <span style='color:#e6811eff'>...</span>, ...)</div>
+
+<center><img src="img/icons/scales.svg" style="width:90%"></center>
+
+Scales <span style='font-style:italic'>map</span> the values from the data to some plot property (the <span style='font-style:italic'>aesthetics</span> of the plot).
+These can be either <span style='font-style:italic'>positional</span> (x, y), or another <span style='font-style:italic'>visual property</span> (color, shape, size).
+
+Scales are set within either globally within `ggplot(data = data, mapping = aes(<set scales>))`, or locally within `geom_` (`geom_point(data = data, mapping = aes(<set scales>))`).
+
+All scales come in the two flavours <span style='font-style:italic'>continuous</span> or <span style='font-style:italic'>discrete</span>.
+Which to apply depends if the respective quantity within your data is continuous or categorical.
+Using the wrong type will produce an error...
+
+<div ><div class="column3">
+```{r, eval = FALSE}
+scale_x_continuous()
+scale_y_log10()
+scale_x_date()
+```
+</div><div class="column3b">
+```{r, eval = FALSE}
+scale_color_brewer()
+scale_fill_gradient2()
+scale_shape_manual()
+```
+</div><div class="column3b">
+```{r, eval = FALSE}
+scale_shape_manual()
+scale_size_continuous()
+# scale_ ...
+```
+</div></div>
+
+## Basics: <span style='color:#B86614FF'>scales</span>
+
+We allready used scales before, when we set the `x` and `y` axis of our `ggplot()`.<br>
+Now we are also going to add color:
+
+```{r, eval = FALSE}
+p <- ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp, color = continent))+
+  geom_point()
+```
+<center>
+```{r, echo = FALSE, fig.width = 5, fig.asp = .5, out.width = '85%'}
+(p <- ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp, color = continent))+
+  geom_point())
+```
+</center>
+
+## Basics: <span style='color:#B86614FF'>scales</span>
+
+All properties can be set in two ways:
+
+- inside the mapping (`geom_point(mapping = aes(color = continent))`)
+- as independent property (`geom_point(mapping = aes(<some aes>), color = '#ca8c4fff')`)
+
+If set within the mapping, the propperty has an actual meaning - it represents data.<br>
+Otherwise it is just a visual effect to change the plot appearance.
+
+<center>
+```{r, echo = FALSE, fig.asp = .3, out.width = '101%'}
+(ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp, color = continent))+
+  geom_point()) +
+(ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp))+
+  geom_point(color = '#ca8c4fff'))
+```
+</center>
+
+## Basics: <span style='color:#B86614FF'>scales</span>
+
+The representation of a scale can adjusted with the `scale_ ...` functions:
+
+<div ><div class="column2">
+```{r, fig.asp = .7, fig.width = 4, out.width = '110%'}
+p + scale_x_log10()
+```
+</div><div class="column2b">
+```{r, fig.asp = .7, fig.width = 4, out.width = '110%'}
+p + scale_color_brewer(palette = 'Set1')
+```
+</div></div>
+
+## Basics: <span style='color:#B86614FF'>scales</span>
+
+```{r}
+clr <- RColorBrewer::brewer.pal(5, name = 'Set1') %>%
+  set_names(nm = gapminder$continent %>% unique() %>% sort())
+clr
+plot_gm <- function(data){ data %>% ggplot(aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point() + scale_color_manual(values = clr) + scale_x_continuous(labels = scales::comma_format())}
+```
+
+<div><div class="column2">
+```{r, fig.width = 4, fig.asp = .55,  out.width = '108%'}
+gapminder %>%
+  filter(continent %in% c("Americas", "Europe")) %>%
+  plot_gm()
+```
+</div>
+<div class="column2b">
+```{r, fig.width = 4, fig.asp = .55,  out.width = '108%'}
+gapminder %>%
+  filter(continent %in% c("Africa", "Americas")) %>%
+  plot_gm()
+```
+</div></div>
+
+## Basics: <span style='color:#B86614FF'>scales</span>
+
+<div class="code_ex">**guides**(&lt;aes&gt; = <span style='color:#e6811eff'>guide_ ...(</span> override.aes = list(shape = ..., ...)<span style='color:#e6811eff'>)</span>)</div><br>
+
+<div ><div class="column2">
+Customizung the legendend layout:<br>
+
+```{r, eval = FALSE}
+p +
+  scale_color_brewer(palette = 'Set1') +
+  guides( color = guide_legend(title = 'Where:',
+            ncol = 2,
+            override.aes = list( shape = 15,
+                                 size = 3)))
+```
+<br>
+Several guides can be modified within `guides()`:
+
+```{r, eval = FALSE}
+guides( color = guide_colorbar(),
+        shape = guide_legend(),
+        size = guide_legend())
+```
+
+</div><div class="column2b">
+```{r, echo = FALSE, fig.asp = .9, fig.width = 4.5, out.width = '130%'}
+p +
+  scale_color_brewer(palette = 'Set1') +
+  guides( color = guide_legend(title = 'Where:',
+            ncol = 2,
+            override.aes = list( shape = 15,
+                                 size = 3)))
+```
+</div></div>
+
+## Basics: <span style='color:#A62526FF'>coordinate system</span>
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = "#A62526FF", fill = '#A62526FF'))
+update_geom_defaults("point",   list(colour = "#A62526FF", fill = '#A62526FF'))
+update_geom_defaults("line",   list(colour = "#A62526FF", fill = '#A62526FF'))
+update_geom_defaults("sf",   list(colour = "#A62526FF", fill = '#A62526FF' %>% clr_lighten()))
+theme_set(theme_new_clr('#A62526FF'))
+```
+<div class="code_ex">**coord_ ... **(<span style='color:#A62526FF'>xlim</span> = <span style='color:#A62526FF'>c(..., ...)</span>, <span style='color:#A62526FF'>ylim</span> = <span style='color:#A62526FF'>c(..., ...)</span>, ...)</div><br>
+
+<center><img src="img/icons/coords.svg" style="width:90%"></center>
+
+<br>
+
+The coordinate system provides the reference plane for the positional scales (x & y axis).<br>
+
+Common coordinate systems include:
+
+  - Cartesian coordinates (orthogonal)
+  - Polar coordinate (radius & angle)
+  - Map projections (eg. WGS84)
+
+## Basics: <span style='color:#A62526FF'>coordinate system</span>
+
+```{r}
+p2 <- tibble(x = 1:7, y = c(1:4, 3:1)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line() +
+  geom_point()
+```
+
+<div><div class="column2">
+```{r, fig.width = 4, fig.asp = .9,  out.width = '95%'}
+p2 + coord_fixed(ratio = 2)
+```
+</div>
+<div class="column2b">
+```{r, fig.width = 4, fig.asp = .9,  out.width = '95%'}
+p2 + coord_polar()
+```
+</div></div>
+
+## Basics: <span style='color:#A62526FF'>coordinate system</span>
+
+```{r}
+p3 <- gapminder %>% filter(continent %in% c('Asia', 'Europe')) %>%
+  ggplot(aes(x = continent, y = lifeExp)) + geom_boxplot()
+```
+
+<div ><div class="column3">
+```{r, fig.width = 3, fig.asp = .8,  out.width = '95%'}
+# original
+# y scale
+p3
+```
+</div><div class="column3b">
+```{r, fig.width = 3, fig.asp = .8,  out.width = '95%',warning = FALSE}
+p3 +
+ scale_y_continuous(
+  limits = c(45, 72))
+```
+</div><div class="column3b">
+```{r, fig.width = 3, fig.asp = .8,  out.width = '95%'}
+p3 +
+coord_cartesian(
+  ylim = c(45, 72))
+```
+</div></div>
+
+## Basics: <span style='color:#A62526FF'>coordinate system</span>
+
+```{r}
+library(rnaturalearth)
+library(sf)
+Canada <- ne_countries(country = "Canada", scale = 'medium', returnclass = 'sf')
+p4 <- Canada %>% ggplot() + geom_sf()
+```
+
+<div ><div class="column2">
+```{r, fig.width = 3, fig.asp = .8,  out.width = '95%'}
+p4 + # WGS 84
+  coord_sf(crs = 4326)
+```
+</div><div class="column2b">
+```{r, fig.width = 3, fig.asp = .8,  out.width = '95%',warning = FALSE}
+p4 + # Canada Lambert
+  coord_sf(crs = 3347)
+```
+</div></div>
+
+## Basics: <span style='color:#458443FF'>facets</span>
+
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = "#458443FF", fill = '#458443FF'))
+update_geom_defaults("point",   list(colour = "#458443FF", fill = '#458443FF'))
+update_geom_defaults("line",   list(colour = "#458443FF", fill = '#458443FF'))
+theme_set(theme_new_clr('#458443FF') + theme(axis.text.x = element_text(angle = 30, hjust = 1)))
+scale_fill_continuous <- new_fill_scale(clr = '#458443FF')
+```
+<div class="code_ex">**facet_ ... **(<span style='color:#458443FF'>x ~ y</span>, <span style='color:#458443FF'>scales</span> = <span style='color:#458443FF'>'free_...'</span>, ...)</div><br>
+
+<center><img src="img/icons/facets.svg" style="width:90%"></center><br>
+
+Facetting is used to repeat the same type of plot for several (logical) subsets of the data set.
+
+This technique is also known as <span style='font-style:italic'>small multiples</span>, <span style='font-style:italic'>trellis plot</span> or <span style='font-style:italic'>latticing</span>.
+
+## Basics: <span style='color:#458443FF'>facets</span>
+```{r, eval = FALSE}
+p + facet_wrap(continent ~ ., ncol = 5)
+```
+<center>
+```{r, echo = FALSE, fig.width = 9, fig.asp = .25, out.width = '90%', warning = FALSE}
+p + facet_wrap(continent ~ ., ncol = 5)
+```
+</center>
+```{r, eval = FALSE}
+p + facet_wrap(facets = vars(continent), ncol = 5, scales = 'free')
+```
+<center>
+```{r, echo = FALSE, fig.width = 9, fig.asp = .25, out.width = '90%', warning = FALSE}
+p + facet_wrap(facets = vars(continent), ncol = 5, scales = 'free')
+```
+</center>
+
+## Basics: <span style='color:#458443FF'>facets</span>
+
+```{r, eval = FALSE}
+gapminder %>%
+  filter(year %in% c(1952, 1977, 2007)) %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp, color = continent))+
+  geom_point() +
+  facet_grid(year ~ continent, as.table = FALSE)
+```
+<center>
+```{r, echo = FALSE, fig.width = 8.5, fig.asp = .45, out.width = '95%', warning = FALSE}
+gapminder %>%
+  filter(year %in% c(1952, 1977, 2007)) %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp, color = continent))+
+  geom_point() +
+  facet_grid(year ~ continent, as.table = FALSE)
+```
+</center>
+
+## Basics: <span style='color:#6E6E0CFF'>theme</span>
+
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = "#6E6E0CFF", fill = '#6E6E0CFF'))
+update_geom_defaults("point",   list(colour = "#6E6E0CFF", fill = '#6E6E0CFF'))
+update_geom_defaults("line",   list(colour = "#6E6E0CFF", fill = '#6E6E0CFF'))
+theme_set(theme_new_clr('#6E6E0CFF'))
+scale_fill_continuous <- new_fill_scale(clr = '#6E6E0CFF')
+```
+<div class="code_ex">**theme_ ... **() + theme(... = <span style='color:#6E6E0CFF'>element_...( ... )</span>)</div><br>
+
+<center><img src="img/icons/themes.svg" style="width:90%"></center>
+
+<br>
+
+The theme of a ggplot includes any part of the visual appearance that is not directly related to the data itself.
+
+This includes for example the styling of the axis, the background grid or the used font.
+
+## Basics: <span style='color:#6E6E0CFF'>theme</span>
+
+There are several predefined themes (`theme_ ... ()`) within ggplot2:
+
+<div ><div class="column3">
+```{r, fig.width = 3.2, fig.asp = .8,  out.width = '99%'}
+# default theme
+p
+```
+</div><div class="column3b">
+```{r, fig.width = 3.2, fig.asp = .8,  out.width = '99%',warning = FALSE}
+p +
+ theme_grey()
+```
+</div><div class="column3b">
+```{r, fig.width = 3.2, fig.asp = .8,  out.width = '99%'}
+p +
+ theme_minimal()
+```
+</div></div>
+
+## Basics: <span style='color:#6E6E0CFF'>theme</span>
+
+All non-data plot elements can be adjusted/ toggled using the `theme()` function:
+
+<div ><div class="column2">
+```{r, fig.width = 4.5, fig.asp = .8,  out.width = '99%'}
+p +
+  theme(legend.position = 'bottom',
+        axis.line = element_blank(),
+        text = element_text(color = 'black'))
+```
+</div><div class="column2b">
+```{r, fig.width = 4.5, fig.asp = .8,  out.width = '99%'}
+p +
+ theme(panel.grid = element_blank(),
+       axis.text =  element_text(face = "bold"),
+       axis.text.x = element_text(angle = 30))
+```
+</div></div>
+
+## {data-background=img/title.jpg data-background-size=cover}
+
+<div style='position:absolute; top:35%;left:0px; text-align:center; width:100%'>
+<h2 style='color:#FFFFFF; font-size: 60px;'>Arranging and<br>exporting ggplots</h2>
+</div>
+
+<div class="titler">
+```{r, eval = FALSE}
+devtools::install_github("thomasp85/patchwork")
+devtools::install_github("wilkelab/cowplot")
+```
+</div>
+
+<a href="https://patchwork.data-imaginist.com"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/patchwork.svg"></a>
+<a href="https://wilkelab.org/cowplot/"><img style="position:absolute; top:10px; right:75px; width:60px;" src="img/hexes/cowplot.svg"></a>
+
+## Arranging ggplots: <span style='color:#4D4D4DFF'>patchwork</span>
+
+```{r, include = FALSE}
+update_geom_defaults("rect",   list(colour = rgb(.3,.3,.3), fill = rgb(.3,.3,.3)))
+update_geom_defaults("point",   list(colour = rgb(.3,.3,.3), fill = rgb(.3,.3,.3)))
+update_geom_defaults("line",   list(colour = rgb(.3,.3,.3), fill = rgb(.3,.3,.3)))
+theme_set(theme_gray())
+scale_fill_continuous <- ggplot2::scale_fill_continuous()
+```
+
+```{r, eval = FALSE}
+library(patchwork)
+```
+
+<div ><div class="column2">
+```{r, fig.width = 4.5, fig.asp = .8,  out.width = '99%'}
+p + p
+```
+</div><div class="column2b">
+```{r, fig.width = 4.5, fig.asp = .8,  out.width = '99%'}
+p / p
+```
+</div></div>
+
+<a href="https://patchwork.data-imaginist.com"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/patchwork.svg"></a>
+
+## Arranging ggplots: <span style='color:#4D4D4DFF'>patchwork</span>
+
+```{r, fig.width = 9, fig.asp = .4,  out.width = '99%'}
+(p + p) / p +
+  plot_annotation(tag_levels = 'a')+
+  plot_layout(guides = 'collect') & theme_minimal()
+```
+
+<a href="https://patchwork.data-imaginist.com"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/patchwork.svg"></a>
+
+## Arranging ggplots: <span style='color:#4D4D4DFF'>cowplot</span>
+
+```{r, eval = FALSE}
+library(cowplot)
+circle_grob <- grid::circleGrob(gp = grid::gpar(fill = rgb(1,1,1,.4)))
+```
+```{r, include = FALSE}
+circle_grob <- grid::circleGrob(gp = grid::gpar(fill = rgb(1,1,1,.4)))
+```
+
+<div ><div class="column2">
+```{r, fig.width = 4.5, fig.asp = .8,  out.width = '99%'}
+plot_grid(p, p,ncol = 1)
+```
+</div><div class="column2b">
+```{r, fig.width = 4.5, fig.asp = .8,  out.width = '99%'}
+ggdraw(p) +
+  draw_grob(circle_grob, .5,.1,.4,.4)
+```
+</div></div>
+
+<a href="https://wilkelab.org/cowplot/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/cowplot.svg"></a>
+
+## Arranging ggplots: <span style='color:#4D4D4DFF'>cowplot</span>
+
+```{r, fig.width = 9, fig.asp = .4,  out.width = '99%'}
+base_plot <- ~{ par(mar = c(3, 3, 1, 1), mgp = c(2, 1, 0)); plot(1,1) }
+
+list(p, base_plot, circle_grob, p) %>%
+  plot_grid(plotlist = ., ncol = 2, labels = c('a','b','c','d'))
+```
+
+<a href="https://wilkelab.org/cowplot/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/cowplot.svg"></a>
+
+## Exporting ggplots
+
+```{r}
+ggsave(plot = p, filename = "new_ggplot.pdf", width = 8, height = 6)
+ggsave(plot = p, filename = "new_ggplot.png", width = 8, height = 6, dpi = 200)
+```
+
+The {hypoimg} package includes a small wrapper around `ggsave()` to add metadata to plot.
+
+(I use it to add the name of the script creating the plot to the plot file.)
+
+```{r}
+# only works on unix system with exiftool installed
+hypoimg::hypo_save(plot = p, filename = "new_ggplot.pdf", width = 8, height = 6,
+                   comment = "this is the tutorial plot...")
+hypoimg::hypo_show_metadata("new_ggplot.pdf")
+```
+
+<a href="https://k-hench.github.io/hypoimg/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/hypoimg.svg"></a>
+
+## {data-background=img/title.jpg data-background-size=cover}
+
+<div style='position:absolute; top:35%;left:0px; text-align:center; width:100%'>
+<h2 style='color:#FFFFFF; font-size: 60px;'>Adding colors</h2>
+</div>
+
+<div class="titler">
+```{r, eval = FALSE}
+install.packages("rcartocolor")
+devtools::install_github("thomasp85/scico")
+devtools::install_github("EmilHvitfeldt/paletteer")
+devtools::install_github("EmilHvitfeldt/prismatic")
+```
+</div>
+
+<a href="https://github.com/thomasp85/scico"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/scico.svg"></a>
+<a href="https://emilhvitfeldt.github.io/paletteer/"><img style="position:absolute; top:10px; right:75px; width:60px;" src="img/hexes/paletteer.svg"></a>
+<a href="https://emilhvitfeldt.github.io/prismatic/"><img style="position:absolute; top:10px; right:140px; width:60px;" src="img/hexes/prismatic.svg"></a>
+
+## Colors: predefined
+
+Several packages provide well balanced sets of color to use with `ggplot()`: eg.  [{RColorBrewer}](http://colorbrewer2.org/), [{rcartocolors}](https://nowosad.github.io/rcartocolor/), [{scico}](https://github.com/thomasp85/scico) or [{paletteer}](https://emilhvitfeldt.github.io/paletteer/).
+```{r}
+p5 <- p +
+  guides(color = guide_legend(override.aes = list(size = 5), nrow = 2)) +
+  theme(legend.position = 'bottom')
+```
+
+<div ><div class="column2">
+```{r, fig.width = 4, fig.asp = .8,  out.width = '99%'}
+p5 +
+  scale_color_grey()
+
+```
+</div><div class="column2b">
+```{r, fig.width = 4, fig.asp = .8,  out.width = '99%'}
+p5 +
+  scale_color_viridis_d()
+```
+</div></div>
+
+## Colors: predefined (color brewer)
+
+<div ><div class="column2">
+```{r, fig.width = 4, fig.asp = 1.1,  out.width = '99%'}
+p5 +
+  scale_color_brewer(palette = "RdYlBu")
+```
+</div><div class="column2b">
+```{r, echo = FALSE, fig.width = 7, fig.asp = 1.1,  out.width = '130%'}
+RColorBrewer::display.brewer.all()
+```
+</div></div>
+
+<a href="http://colorbrewer2.org"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## Colors: predefined (cartocolor)
+
+```{r}
+library(rcartocolor)
+```
+
+<div ><div class="column2">
+```{r, fig.width = 4, fig.asp = 1,  out.width = '99%'}
+p5 +
+  scale_color_carto_d(palette = 'Earth')
+```
+</div><div class="column2b">
+```{r, echo = FALSE, fig.width = 7, fig.asp = 1.1,  out.width = '130%'}
+display_carto_all()
+```
+</div></div>
+
+<a href="https://nowosad.github.io/rcartocolor/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## Colors: predefined (scico)
+
+```{r}
+library(scico)
+```
+
+<div ><div class="column2">
+```{r, fig.width = 4, fig.asp = 1,  out.width = '99%'}
+p5 +
+  scale_color_scico_d(palette = "berlin")
+```
+</div><div class="column2b">
+```{r, fig.width = 4, fig.asp = .8,  out.width = '110%'}
+scico_palette_show()
+```
+</div></div>
+
+<a href="https://github.com/thomasp85/scico"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/scico.svg"></a>
+
+## Colors: predefined (paletteer)
+
+```{r}
+library(paletteer)
+```
+
+<div ><div class="column2">
+```{r, fig.width = 4, fig.asp = 1,  out.width = '99%'}
+p5 +
+  scale_color_paletteer_d("nord::aurora")
+```
+</div><div class="column2">
+```{r, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      comment = "",
+                      collapse = TRUE)
+```
+```{r, echo = FALSE}
+options(width = 60)
+paletteer::palettes_d_names %>%
+  group_by(package) %>%
+  count() %>%
+  mutate(contnet = str_c(package, ': ', n)) %>%
+  .$contnet
+```
+</div></div>
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      comment = "#>",
+                      collapse = TRUE)
+```
+
+<a href="https://emilhvitfeldt.github.io/paletteer/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/paletteer.svg"></a>
+
+## Colors: custom
+
+```{r}
+gm_names <- function(x){ x %>% set_names(nm = gapminder$continent %>% unique() %>% sort())}
+clr <- RColorBrewer::brewer.pal(5, name = 'Set1') %>% gm_names
+clr_dark <- clr %>% clr_darken() %>% gm_names
+clr_light <- clr %>% clr_lighten() %>% gm_names
+```
+
+<div ><div class="column3">
+```{r, include = FALSE}
+theme_set(theme_gray() +
+            theme(axis.text = element_blank(),
+                  axis.ticks = element_blank(),
+                  axis.title = element_blank(),
+                  legend.position = 'none'))
+```
+```{r, fig.width = 3.5, fig.asp = .9,  out.width = '95%'}
+p5 +
+  scale_color_manual(
+    values = clr_light)
+```
+</div><div class="column3b">
+```{r, fig.width = 3.5, fig.asp = .9,  out.width = '95%',warning = FALSE}
+p5 +
+  scale_color_manual(
+    values = clr)
+```
+</div><div class="column3b">
+```{r, fig.width = 3.5, fig.asp = .9,  out.width = '95%'}
+p5 +
+  scale_color_manual(
+    values = clr_dark)
+```
+</div></div>
+
+<a href="https://emilhvitfeldt.github.io/prismatic/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/prismatic.svg"></a>
+
+## Colors: custom
+```{r, fig.width = 9, fig.asp = .4,  out.width = '95%', fig.align = 'center'}
+modify_palette <- function(mod_fun){
+  clr <- RColorBrewer::brewer.pal(5, name = 'Set1') %>%  mod_fun() %>%  gm_names
+  p5 +  scale_color_manual(values = clr) + theme(legend.position = 'none')}
+
+list(clr_darken, clr_lighten, clr_desaturate, clr_saturate, clr_alpha, clr_negate) %>%
+  purrr::map(modify_palette) %>% plot_grid(plotlist = .)
+```
+
+<a href="https://emilhvitfeldt.github.io/prismatic/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/prismatic.svg"></a>
+<a href="https://purrr.tidyverse.org/"><img style="position:absolute; top:10px; right:75px; width:60px;" src="img/hexes/purrr.svg"></a>
+<a href="https://wilkelab.org/cowplot/"><img style="position:absolute; top:10px; right:140px; width:60px;" src="img/hexes/cowplot.svg"></a>
+
+## Colors: color blindness
+
+When using custom colors, it is good practice to check if they are color blind save using the package [{colorblindr}](https://github.com/clauswilke/colorblindr).
+
+```{r, fig.width = 9, fig.asp = .4,  out.width = '95%', fig.align = 'center'}
+# devtools::install_github("clauswilke/colorblindr")
+(p5 + scale_color_manual(values = clr) + theme(legend.position = 'none')) %>%
+  colorblindr::cvd_grid()
+```
+
+<a href="https://github.com/clauswilke/colorblindr"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+```{r, include = FALSE}
+theme_set(theme_gray())
+```
+
+## {data-background=img/title.jpg data-background-size=cover}
+
+<div style='position:absolute; top:35%;left:0px; text-align:center; width:100%'>
+<h2 style='color:#FFFFFF; font-size: 60px;'>Annotations and other bad decisions</h2>
+</div>
+
+<div class="titler">
+```{r, eval = FALSE}
+install.packages("extrafont")
+devtools::install_github("clauswilke/ggtext")
+devtools::install_github("k-hench/hypoimg")
+devtools::install_github('thomasp85/ggfx')
+devtools::install_github("tylermorganwall/rayshader")
+devtools::install_github('thomasp85/gganimate')
+```
+</div>
+
+<a href="https://gganimate.com/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/gganimate.svg"></a>
+<a href="https://www.rayshader.com/"><img style="position:absolute; top:10px; right:75px; width:60px;" src="img/hexes/rayshader.svg"></a>
+<a href="https://k-hench.github.io/hypoimg/"><img style="position:absolute; top:10px; right:140px; width:60px;" src="img/hexes/hypoimg.svg"></a>
+
+```{r, include = FALSE}
+scale_fill_discrete <- function(...){ggplot2::scale_fill_brewer(name = '', palette = 'Set1', ...)}
+scale_color_discrete <- function(...){ggplot2::scale_color_brewer(name = '', palette = 'Set1', ...)}
+scale_colour_discrete <- function(...){ggplot2::scale_colour_brewer(name = '', palette = 'Set1', ...)}
+```
+
+## Text format and math symbols
+
+<div ><div class="column2">
+To format text including [mathematical symblols](https://stat.ethz.ch/R-manual/R-devel/library/grDevices/html/plotmath.html) the function `expression()` is used.
+
+```{r, eval = FALSE}
+p5 +
+  labs(title = expression(bold(Title^{plot})),
+       subtitle = expression(
+         bolditalic(symbols)~cdots~alpha
+         ),
+       x = expression(Title[x~axis]),
+       y = expression(Title~(italic(y~axis))))+
+  theme(legend.position = 'none')
+```
+</div><div class="column2b">
+```{r, echo = FALSE, fig.width = 3.75, fig.asp = 1,  out.width = '115%', fig.align = 'center'}
+p5 +
+  labs(title = expression(bold(Title^{plot})),
+       subtitle = expression(
+         bolditalic(symbols)~cdots~alpha
+         ),
+       x = expression(Title[x~axis]),
+       y = expression(Title~(italic(y~axis))))+
+  theme(legend.position = 'none')
+```
+</div></div>
+
+## Fonts
+
+To use custom fonts within `ggplot()`, the system fonts need to be loaded using the package [{extrafont}](https://github.com/wch/extrafont).
+
+<div ><div class="column2">
+```{r, eval = FALSE}
+library(extrafont)
+# font_import # only needs to be run once
+# loadfonts()
+p5 +
+  geom_text(inherit.aes = FALSE,
+            data = data_text,
+            aes(x = x ,y = y ,
+                label = label),
+            family = "xkcd Script")+
+  labs(title = 'Demo Plot',
+       subtitle = 'This is an example plot.',
+       caption = "created by: k-hench") +
+  theme(plot.title =
+          element_text(family = "Archistico",
+                       size = 20),
+          title =
+          element_text(family = "xkcd Script"))
+```
+</div><div class="column2b">
+```{r, echo = FALSE, fig.width = 3.75, fig.asp = 1,  out.width = '110%', fig.align = 'center'}
+p5 +
+  geom_text(inherit.aes = FALSE,
+            data = data_text,
+            aes(x = x ,y = y ,
+                label = label),
+            family = "xkcd Script")+
+  labs(title = 'Demo Plot',
+       subtitle = 'This is an example plot.',
+       caption = "created by: k-hench") +
+  theme(plot.title = element_text(family = "Archistico", size = 20),
+        title = element_text(family = "xkcd Script"))
+```
+</div></div>
+
+<a href="https://github.com/wch/extrafont"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## Text styling with markdown (ggtext)
+```{r}
+lbs <- c( Africa = "<i style='color:#A62526FF'>Africa</i>", Americas = "<i style='color:#366489FF'>Americas</i>",
+          Asia = "<i style='color:#458443FF'>Asia</i>", Europe = "<i style='color:#75457BFF'>Europe</i>",
+          Oceania = "<i style='color:#B86614FF'>Oceania</i>")
+```
+
+<div ><div class="column2">
+```{r, eval = FALSE}
+library(ggtext)
+p5 + scale_color_manual(name = NULL, values = clr,
+                        labels = lbs ) +
+  labs(
+    title = "***Demo* plot**
+    this is still the title",
+    subtitle = "*not* the title",
+    y = "*x*<sup>2</sup> + 5*x* + *C*<sub>*i*</sub>",
+    x = "**style** with<br>line *break*" ) +
+  theme(
+    plot.title = element_markdown(lineheight = 1.1),
+    plot.subtitle = element_markdown(),
+    axis.title.x = element_markdown(),
+    axis.title.y = element_markdown(vjust = .5),
+    legend.text = element_markdown()
+  )
+```
+</div><div class="column2b">
+```{r, echo = FALSE, fig.width = 3.75, fig.asp = 1,  out.width = '110%', fig.align = 'center'}
+library(ggtext)
+
+p5 +
+  scale_color_manual(
+    name = NULL,
+    values = clr,
+    labels = lbs
+  ) +
+  labs(
+    title = "***Demo* plot**
+    this is still the title",
+    subtitle = "*not* the title",
+    y = "*x*<sup>2</sup> + 5*x* + *C*<sub>*i*</sub>",
+    x = "**style** with<br>line *break*"
+  ) +
+  theme(
+    plot.title = element_markdown(lineheight = 1.1),
+    plot.subtitle = element_markdown(),
+    axis.title.x = element_markdown(),
+    axis.title.y = element_markdown(vjust = .5),
+    legend.text = element_markdown()
+  )
+```
+</div></div>
+
+<a href="https://github.com/clauswilke/ggtext"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## Annotations: Basics
+
+Anything that is a *grid object* (aka. *grob*), can be added to a ggplot as annotation.
+Annotations are standard layers that are added depending on the `ggplot()` stack (below, in between or ontop of geoms).
+Grobs include basic geometric shapes created by the {grid} package, but also ggplot objects or {patchwork}/{cowplot} arrangemnts can be turned into a grob.
+
+```{r, fig.width = 7, fig.asp = .3,  out.width = '95%', fig.align = 'center'}
+(p + annotation_custom(grob = circle_grob)) +
+(p + annotation_custom(grob = circle_grob, xmin = 60000, ymax = 50))
+```
+
+## Annotations: ggplotGrob (eg. map inset)
+
+```{r, fig.width = 7, fig.asp = .5,  out.width = '75%', fig.align = 'center'}
+p +
+  annotation_custom(grob = ggplotGrob(p),
+                    xmin = 35000, ymax = 55) +
+  theme_void()+
+  theme(legend.position = 'none')
+```
+
+## Annotations: Facets with annotations
+
+```{r, message = FALSE, warning = FALSE, fig.width = 7, fig.asp = .42,  out.width = '80%', fig.align = 'center'}
+world <- hypoimg::hypo_read_svg('img/geo/world_c.svg')
+
+p6 <- p5 + facet_wrap(continent ~ .) + theme_gray() +
+  theme(legend.position = 'none', axis.title = element_blank(),
+        axis.text = element_blank(), axis.ticks = element_blank())
+
+p6 + annotation_custom(grob = world, xmin = 25000, ymax = 65)
+```
+
+## Annotations: Facets with annotations
+
+```{r, fig.width = 7, warning = FALSE, message = FALSE, fig.asp = .42,  out.width = '80%', fig.align = 'center'}
+get_grob <- function(continent){ hypoimg::hypo_read_svg(str_c('img/geo/',continent,'_c.svg')) }
+
+grob_tibble <- tibble( continent = gapminder$continent %>% levels(),
+  x = c(.8,.75,.8,.8,.8), y = c(.45,.4,.35,.35,.35)) %>%
+  mutate(grob = map(continent, ~ get_grob(.)))
+
+p6 + hypoimg::geom_hypo_grob(inherit.aes = FALSE, data = grob_tibble,
+                 aes(grob = grob, x = x, y = y), width = .8, height = .65, angle = 0)
+```
+
+<a href="https://k-hench.github.io/hypoimg/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/hypoimg.svg"></a>
+
+## Layer effects
+```{r, fig.width = 7, fig.asp = .5,  out.width = '75%', fig.align = 'center'}
+library(ggfx)
+ggplot(data = gapminder, aes(x = gdpPercap, y = lifeExp, color = continent))+
+  with_blur(geom_point(size = 3), sigma = 3)+
+  geom_point(shape = 21, fill = 'white')+
+  theme(legend.position = 'none')
+```
+
+<a href="https://github.com/thomasp85/ggfx"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## Plot effects (preparation)
+
+<div ><div class="column2">
+```{r}
+p7 <- gapminder %>%
+  group_by(continent, year) %>%
+  summarise(lifeExp = mean(lifeExp)) %>%
+  ungroup() %>%
+  group_by(continent) %>%
+  mutate(avg_lifeExp =  mean(lifeExp)) %>%
+  ungroup() %>%
+  mutate(continent = fct_reorder(continent,
+                                 avg_lifeExp)) %>%
+  ggplot(aes(x = year, y = continent,
+             fill = lifeExp))+
+  geom_tile()+
+  scale_fill_viridis_c('Average life expectancy',
+                       option = 'E')+
+  guides(fill =
+           guide_colorbar(title.position = 'top',
+                          barheight = unit(7,'pt'),
+                          barwidth = unit(200,'pt')))+
+  theme(legend.position = 'bottom')
+```
+</div><div class="column2b">
+```{r, fig.width = 3.75, fig.asp = 1,  out.width = '110%', fig.align = 'center'}
+p7
+```
+</div></div>
+
+<a href="https://dplyr.tidyverse.org/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/dplyr.svg"></a>
+
+## Plot effects
+
+```{r, eval = FALSE}
+library(rayshader)
+
+plot_gg(p7, multicore = TRUE, width = 5, height = 5, scale = 250)
+```
+
+<center>
+<img src="rayshader.png" style="width:65%;">
+</center>
+
+<a href="https://www.rayshader.com/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/rayshader.svg"></a>
+
+## Animations (preparation)
+
+```{r, include = FALSE}
+theme_set(theme_grey())
+```
+
+```{r, fig.width = 7, fig.asp = .55,  out.width = '70%', fig.align = 'center'}
+p8 <- ggplot(data = gapminder,
+       aes(x = gdpPercap, y = lifeExp, size = pop, fill = continent))+
+  geom_point(color = 'black', shape = 21, alpha = .6)+
+  scale_size(range = c(.3,9), guide = FALSE) +
+  guides(fill = guide_legend(override.aes = list(size = 5)))+
+  theme(legend.position = 'bottom')
+p8
+```
+
+## Animations (run)
+
+```{r, eval = FALSE}
+library(gganimate)
+p8 + labs(title = 'Year: {frame_time}', x = 'GDP per capita', y = 'life expectancy') +
+  transition_time(year) +
+  ease_aes('linear')
+```
+
+<center><img style="width:60%;" src="img/gapminder_bubbles.gif"></center>
+
+<a href="https://gganimate.com/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/gganimate.svg"></a>
+
+## {data-background=img/ggplot2_extensions.png data-background-size=cover}
+
+<a href="http://exts.ggplot2.tidyverse.org/"><img style="position:absolute; top:10px; right:10px; width:60px;" src="img/hexes/www.svg"></a>
+
+## {data-background=img/art_dark.jpg data-background-size=cover}
+
+<asidek class="gdbark"></asidek>
+
+<aside class="gdbar" style="width: 15%;"><img src="img/logo.svg"></aside>
+
+<div class="column2" style="color: #FFFFFF; font-family: 'xkcd script'; font-size: 36px;">
+<h2 style="color: #FFFFFF;">Further reading</h2>
+
+- About ggplot2: The [ggplot2 book](https://ggplot2-book.org/) (by Hadley Wickham), the [cookbook for R](http://www.cookbook-r.com/Graphs/), [Beautiful plotting in R](http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/) & the [R graph gallery](https://www.r-graph-gallery.com/)
+- Extending ggplot: [ggplot2 extensions](http://exts.ggplot2.tidyverse.org/)
+- Data visualization: [Tufte](https://www.edwardtufte.com/tufte/),  [fundamentals of data visualization (Wilke)](https://serialmentor.com/dataviz/index.html)
+
+</div>

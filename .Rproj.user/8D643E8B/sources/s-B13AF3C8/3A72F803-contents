@@ -1,0 +1,245 @@
+---
+title: "FFT Capuchins intergroup"
+subtitle: "Data exploration of the Food for Thought project"
+author: "Kosmas Hench"
+date: "`r Sys.Date()`"
+documentclass: book
+bibliography: [book.bib]
+biblio-style: apalike
+link-citations: yes
+github-repo: k-hench/bookdown
+description: "Data exploration of the Food for Thought project"
+editor_options: 
+  chunk_output_type: console
+---
+
+# Intro
+
+:::beware
+Under construction...
+
+- singularity repo still *tba*
+:::
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../')
+```
+
+
+```{r htmlTemp3, echo = FALSE, eval = TRUE}
+codejs <- readr::read_lines("./js/codefolding.js")
+collapsejs <- readr::read_lines("./js/collapse.js")
+transitionjs <- readr::read_lines("./js/transition.js")
+dropdownjs <- readr::read_lines("./js/dropdown.js")
+linksanchorjs <- readr::read_lines("./js/book.js")
+
+htmlhead <- c(
+  paste('
+<script>',
+paste(transitionjs, collapse = "\n"),
+'</script>
+<script>',
+paste(collapsejs, collapse = "\n"),
+'</script>
+<script>',
+paste(codejs, collapse = "\n"),
+'</script>
+<script>',
+paste(dropdownjs, collapse = "\n"),
+'</script>
+<script>',
+paste(linksanchorjs, collapse = "\n"),
+'</script>
+<link rel="shortcut icon" href="img/favicon.ico" />
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "hide");
+});
+</script>
+', sep = "\n"),
+  paste0('<script>document.write(\'<div class="btn-group pull-right" style="position: absolute; top: 35px; right: 2%; z-index: 10"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"aria-expanded="true" data-_extension-text-contrast=""><span>global code</span><span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All</a></li><li><a id="rmd-hide-all-code" href="#">Hide All</a></li></ul></div>\')</script>')
+)
+
+readr::write_lines(htmlhead, file = "book/header.html")
+```
+
+## About this Documentation
+
+Individual **code blocks can be collapsed and expanded** using the collapse button:
+
+<div class="demoslider"><div class="demobg"><div class="demonob"></div></div></div>
+
+In the upper right corner, there is also the option to **toggle the code collapsing globally**:  <button type="button" class="btn btn-default btn-xs dropdown-toggle">global code</button> 
+
+To minimize run-time when compiling this documentation, several intermediate steps of the scripts are pre-computed at the time of writing and then loaded during compilation (from the `./steps/` directory).
+This means that some code blocks are not actually run by {knitr} (but their results are loaded in a hidden code block afterwards).
+Those code blocks with long run-times are indicated by their slightly darker background (`executed code` vs. <span class="bg-save">`loaded code`</span>) and the *save* symbol in their upper-right corner: 
+
+<img style="position:relative; width:40px; pointer-events:none;" src="./img/save_solid.svg">
+
+Also, note that it is possible to **zoom on each plot** (generally on every image) by **clicking on it** `r emo::ji("zoom")`.
+
+
+
+
+---
+
+## Setup and Preparations
+
+The *FFT Capuchins intergroup* project depends on several external `R` packages - most prominently [{move}](https://bartk.gitlab.io/move/) for data accession, the [{tidyverse}](https://www.tidyverse.org/) for data Wrangling and [{ctmm}](https://ctmm-initiative.github.io/ctmm/) for continuous time movement modeling.
+
+Additionally, the accompanying `R` package [{fftidy}](https://k-hench.github.io/fftidy/) is provided, which includes the major share of custom helper functions and configurations used within this project.
+
+<a href="https://k-hench.github.io/fftidy/"><img class="hex" style="position:relative;  left:35%; width:30%; max-width:160px;" src="./hex_fftidy.svg"></a>
+
+To ensure reproducibility, the analysis-environment can be re-created using the [*fft singularity container*]() deposited at <span class="warn">tba</span> and build using the `fft.def` file within this repo.
+
+## About the Study System
+
+The Study site is located in <span class="accent">Panama</span> on <span class="accent">Barro Colorado Island</span> (<span class="accent">BCI</span>) which is an island on Gatun Lake.
+
+```{r, warning = FALSE, message = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+library(fftidy)
+library(sf)
+library(patchwork)
+
+inset <- raster::extent(-80.2, -79.5, 8.9, 9.4) %>%
+                    as("SpatialPolygons") %>%
+                    st_as_sf() %>% 
+  st_set_crs(st_crs(island))
+
+coast <- rnaturalearth::ne_coastline(scale = "medium",
+                                     returnclass = "sf") %>%
+  st_cast("MULTIPOLYGON") %>%
+  fftidy::crp(bbox = list(p1 = list( lat = 5, long = -100),
+                          p2 = list( lat = 32, long = -55))) %>%
+  st_union()
+
+pan <-  rnaturalearth::ne_countries(scale = "medium",
+                                    country = "Panama",
+                                    returnclass = "sf")
+```
+
+
+```{r, warning = FALSE, message = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+p1 <- ggplot()+
+  geom_sf(data = coast) +
+  geom_sf(data = pan, color = clr_accent,
+            fill = clr_lighten(clr_accent))+
+  geom_sf(data = inset, color = "black",
+          fill = "transparent", size = .3)+
+  ggspatial::annotation_scale(style = "ticks")+
+  coord_sf(expand = 0)
+
+p2 <- ggplot()+
+  geom_sf(data = pan_detail)+
+  geom_sf(data = canal, color = clr_water)+
+  geom_sf(data = gatun, fill = clr_water, color = "#C3C3C3")+
+  geom_sf(data = island, color = clr_accent, 
+          fill = clr_lighten(clr_accent))+
+  ggspatial::annotation_scale(style = "ticks")+
+  ggspatial::annotation_north_arrow(style = ggspatial::north_arrow_fancy_orienteering,
+                                    location = "tr")+
+  coord_sf(expand = 0)
+
+p1 + p2 &
+  theme_minimal()
+```
+
+The data contains data from eight tracked white face capuchin monkeys (*Cebus capucinus*) that contain both GPS and accelerometer data.
+Each single capuchin monkey represents a larger group.
+
+The data was gathered on two independent field trips: one in 2015 and one in 2017 --- both lasting from late December to April.
+
+## Data Download
+
+The data is deposited on [movebank](www.movebank.org) with the accession numbers <span class="accent">1120749252</span> (GPS data, "*Food for Thought - Comparative Frugivore Tracking Cleaned data v2*") and <span class="accent">468460067</span> (Accelerometer data, *"Food For Thought: Comparative Frugivore Tracking v4 raw data"*).
+
+The data was downloaded prior to the analysis with the provided `R` script `R/movbank_fft_access.R`.
+
+Below is a summary of the main steps needed to download the data. This assumes you have a movebank account with access rights for this particular data set.
+
+For the download we use the package {move}, for data management we default to the {tidyverse}:
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+library(move)
+library(tidyverse)
+```
+
+For secure login (without exposing our password in the `R` history) we make use of the package {getPass} and hide the password in a variable. With the password and our user name we create our movebank login:
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+pass <- getPass::getPass(msg = "The movebank password:")
+login <- movebankLogin(username = "<your user name>",
+                       password = pass)
+```
+
+We will need to download two separate data sets (one fore GPS and one for accelerometer data).
+Using the data set names, we retrieve their movebank IDs.
+
+Querying movebank for the GPS data...
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+fft_mb_id <- getMovebankID("Food for Thought - Comparative Frugivore Tracking Cleaned data v2",
+                           login = login)
+```
+
+... and for the accelerometer data.
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+# To get at the accelerometer data we need to get the raw data (v4)
+fft_mb_id_raw <- getMovebankID("Food For Thought: Comparative Frugivore Tracking v4 raw data",
+login = login)
+```
+
+The *Food for Thought* project contains more species than we are interested in at this point.
+Therefore, we are only going to download a subset containing the capuchin samples.
+For this, we first need to define the sample names:
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+sample_ids <- c("Bob 4661", "Da Vinci 5764", "Ibeth 4654",
+                "Martinelli 5763", "Mimi 4660", "Norah 4655",
+                "Olga 4657", "Valoy 5766"  )
+
+# In movebank we only need the pure sample names - so we can remove the tag ids. 
+sample_names <- sample_ids %>% str_remove(" [0-9]*$")
+```
+
+Now, we can download the GPS data...
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+data <- getMovebankLocationData(study = fft_mb_id,
+                                animalName =  sample_ids,
+                                login = login,
+                                sensorID = "GPS")
+```
+
+...and the accelerometer data.
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+data_acc <- getMovebankNonLocationData(study = fft_mb_id_raw,
+                                       animalName =  sample_names,
+                                       login = login,
+                                       sensorID = "Acceleration")
+```
+
+Finally, we save the data to our project folders `data/` folder (which is where {fftidy} will be looking for it).
+
+```{r, eval = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+write_tsv(x = data, file = "data/fft_capuchins_movebank_download.tsv.gz")
+write_tsv(x = data_acc, file = "data/fft_capuchins_movebank_v4_download.tsv.gz")
+```
+
+At this point, we are set to start with the analysis `r emo::ji("smile")`.
+
+---
+
+<div id="myModal" class="modal">
+  <span class="close">&times;</span>
+  <img class="modal-content" id="img01">
+  <div id="caption"></div>
+</div>
+
+<script src="./js/zoom.js"></script>
+

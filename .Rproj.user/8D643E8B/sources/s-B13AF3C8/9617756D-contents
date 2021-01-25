@@ -1,0 +1,229 @@
+---
+output: html_document
+editor_options:
+  chunk_output_type: console
+---
+
+# Per Individual Raw Data Screen
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../')
+```
+
+---
+
+## Setup and Preparations
+
+Load `R` packages for the project as well as the GPS data.
+
+```{r, warning = FALSE, message = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+library(fftidy)
+library(sf)
+
+data <- data_fft() %>% data_extend()
+```
+
+
+```{r, warning = FALSE, message = FALSE,  fig.height = 3, fig.width = 8, dev.args = list(type = "cairo")}
+data %>%
+  group_by(individual.local.identifier) %>%
+  summarise(start_date = min(date),
+            end_date = max(date),
+             field_season = field_season[[1]]) %>%
+  ungroup() %>%
+  mutate(individual.local.identifier = fct_reorder(individual.local.identifier, -as.numeric(end_date))) %>%
+  ggplot(aes(color = individual.local.identifier))+
+  facet_wrap(field_season ~ ., scales = "free")+
+  geom_segment(aes( y = individual.local.identifier,
+                    yend = individual.local.identifier,
+                    x = start_date,
+                    xend = end_date),
+               size = 5)+
+  scale_color_manual(values = clr_set_base, guide = FALSE) + 
+  theme_minimal() +
+  theme(axis.title = element_blank(),
+        panel.grid.major.y = element_blank())
+```
+
+
+```{r, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10, dev.args = list(type = "cairo")}
+data %>%
+  st_as_sf(coords= c("location.long", "location.lat")) %>%
+  st_set_crs(4326) %>%
+  ggplot()+
+  geom_sf(data = island)+
+  geom_sf(aes(color = individual.local.identifier),
+          size = .2, alpha = .3)+
+  scale_color_manual("Sample ID",
+                     values = clr_set_base) +
+  facet_wrap(field_season ~ .)+
+  ggspatial::annotation_scale(style = "ticks") +
+  guides(color = guide_legend(title.position = "top",
+                              override.aes = list(size = 5,
+                                                  alpha = 1)))+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+```{r, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10, dev.args = list(type = "cairo")}
+data %>%
+  ggplot()+
+  geom_sf(data = island)+
+  ggisoband::geom_density_bands(aes(x = location.long, 
+                         y = location.lat,
+                         fill = after_scale(color),
+                         color = individual.local.identifier,
+                         alpha = stat(density)), bins = 10,
+                     polygon_outline = FALSE)+
+ scale_alpha_continuous(range = c(0,1))+
+ scale_color_manual("Sample ID", values = clr_set_base) +
+ facet_wrap(field_season ~ .)+
+  ggspatial::annotation_scale(style = "ticks") +
+  guides(color = guide_legend(title.position = "top"),
+         alpha = guide_legend("Density",
+                              title.position = "top",
+                              nrow = 2))+
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        axis.title = element_blank())
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE,out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+data_sp <- SpatialPointsDataFrame(coords = data[,c(4,5)],
+                                  data = data,
+                                  proj4string = CRS("+proj=longlat +datum=WGS84")) %>%
+  spTransform(., CRS(bic_proj)) %>%
+  as_tibble() %>%
+  rename(`utm.easting` = "location.long",
+         `utm.northing` = "location.lat") %>%
+  mutate(Z = utm.easting + 1i*utm.northing,
+         pan_time = lubridate::with_tz(time = timestamp,"America/Panama"),
+         quicktime = lubridate::hour(pan_time)+
+         lubridate::minute(pan_time)/60,
+         difftime = timestamp - lag(timestamp, default = NA)) %>%
+  group_by(individual.local.identifier, day) %>%
+  select(individual.local.identifier, timestamp, day, location.long.1, location.lat.1, Z:difftime) %>%
+  mutate(step_distance = Mod(Z - lag(Z,default = NA)),
+         turning_angles = Arg(Z - lag(Z,default = NA))/(2*pi),
+         step_speed_ms = step_distance/as.numeric(difftime) ) %>%
+  ungroup()
+```
+
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE,out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+n_bins_t <- 13
+n_bins_a <- 25
+time_breaks <- seq(4.9, 18.1, length.out = n_bins_t)
+angle_breaks <- seq(-.5,.5, length.out = n_bins_a)
+
+time_centers <- (time_breaks[1:(length(time_breaks)-1)]+time_breaks[2:length(time_breaks)]) / 2
+angle_centers <- (angle_breaks[1:(length(angle_breaks)-1)]+angle_breaks[2:length(angle_breaks)]) / 2
+
+data_polar <- data_sp %>%
+  mutate(angle_bin = cut(turning_angles, angle_breaks),
+         time_bin = cut(quicktime, time_breaks)) %>%
+  group_by(individual.local.identifier, angle_bin, time_bin) %>%
+  count() %>%
+  mutate(time_mid = time_centers[as.numeric(time_bin)],
+         angle_mid = angle_centers[as.numeric(angle_bin)])
+```
+
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE,out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+y_brk <- c(6, 9, 12, 15 ,18)
+
+polar_plot <- function(id){
+  (data_polar %>% 
+     filter(individual.local.identifier == id) %>%
+     ggplot(aes(x = angle_mid, y = time_mid, fill = n))+
+     ggfx::with_blur(geom_tile(fill ="black"),sigma = 2)+
+     geom_tile()+
+     # facet_wrap(individual.local.identifier~., ncol = 4)+
+     coord_polar(direction = -1,start = pi/2)+
+     scale_x_continuous(limits = c(-.5,.5))+
+     scale_y_continuous(breaks = y_brk,
+                        labels = y_brk %>% 
+                          str_pad(width = 2,pad = 0) %>% 
+                          str_c(.,":00 "))+
+     # rcartocolor::scale_fill_carto_c("",
+     #                                 palette = "Fall",
+     #                    guide = FALSE,
+     #                    direction = 1)+
+     scale_fill_distiller(palette = "Greys", guide = FALSE, direction = 1)+
+     theme_void()
+  ) %>% ggplotGrob()
+}
+
+ploar_tib <- tibble(sample_id = sample_ids,
+                    grob = sample_ids %>%
+                      map(polar_plot))
+```
+
+
+```{r, warning = FALSE, message = FALSE, error = FALSE, out.width = "95%", fig.height = 4, fig.width = 12, dev.args = list(type = "cairo")}
+library(raster)
+library(RStoolbox)
+library(stars)
+
+data_slim <- data %>%
+  select(individual.local.identifier,
+         location.long,
+         location.lat,
+         timestamp,
+         timestamp_pan,
+         dist_to_noon_h, 
+         rel_sun_h)
+
+data_slim_sf <- data_slim %>%
+  st_as_sf(coords = c("location.long", "location.lat")) %>%
+  st_set_crs("+proj=longlat +datum=WGS84") %>%
+  st_transform(crs = bic_proj)
+
+sample_stars <- sample_ids %>%
+  map_dfr(sample_as_stars, data_in = data_slim_sf)
+```
+
+
+```{r, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10, dev.args = list(type = "cairo")}
+ggplot()+
+  geom_sf(data = island, fill = rgb(0.9, 0.9, 0.9), color = rgb(0, 0, 0, 0.3)) + 
+  stat_sf_coordinates(data = sample_stars, 
+          aes(color = mean_h, size = n, alpha = sd_h),
+          geom = GeomPoint, shape = 16)+
+  geom_hypo_grob(data = ploar_tib,
+                 aes(grob = grob, angle = 0, height = .4),
+                 inherit.aes = FALSE, x = .2, y = 0.8)+
+  coord_sf(crs = bic_proj)+
+  facet_wrap(sample_id ~., ncol = 4)+
+  scale_color_viridis_c("mean \U0394 h from solar noon", 
+                        na.value = NA, option = "A", direction = -1)+
+  ggspatial::annotation_scale(location = "bl",
+                              width_hint = 0.3,
+                              height = unit(4, 'pt'),
+                              style = 'ticks') +
+  guides(color = guide_colorbar(barheight = unit(15, "pt"),
+                                barwidth = unit(250, "pt"),
+                                title.position = "top"))+
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_size(range = c(.01, 1)) + 
+  scale_alpha(range = c(.01, 1)) +
+  theme_minimal()+
+  theme(plot.background = element_blank(),
+        legend.position = "bottom",
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        strip.background = element_rect(fill = rgb(.9,.9,.9),
+                                        color = NA))
+```
+
+---
+
+<div id="myModal" class="modal">
+  <span class="close">&times;</span>
+  <img class="modal-content" id="img01">
+  <div id="caption"></div>
+</div>
+
+<script src="./js/zoom.js"></script>
