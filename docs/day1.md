@@ -1,6 +1,4 @@
 ---
-title: "Day 1"
-author: "Kosmas Hench"
 output: 
   html_document: 
     theme: yeti
@@ -17,7 +15,7 @@ editor_options:
 The internet is your friend 😄.
 
 The language of the current `R` session can be changed to english using `Sys.setenv()`
-(this only worked once per session for me --- so to toggle back to my initial language I had to restart the r-session) 
+(this only worked *once per session* for me --- so to toggle back to my initial language I had to restart the r-session) 
 
 
 ```r
@@ -28,6 +26,11 @@ x
 ```
 
 ## Basic Data Types 
+
+```
+   Logical  --->  Integer  --->  Numeric  --->  Character
+[FALSE, TRUE]     [0, 1]       [0.0, 1.0]    [“0.0”, “1.0”]
+```
 
 
 ```r
@@ -62,9 +65,13 @@ identical(a, c)
 ## Basic Data Structures
 
 ```
-Atomic Vectors ---------- Matrices
-      |                       |
-    Lists -------------- Data Frames
+         1D            Row/Column         2D
+    Atomic Vectors ------------------> Matrices
+          |                                |
+recursive |                                | Properties Of
+          |                                |
+        Lists <--------------------- Data Frames
+                    Properties Of
 ```
 
 ### Atomic Vectors
@@ -247,11 +254,11 @@ animals_all_combined
 
 list_challange1 <- animals_all_combined[1][1]
 list_challange2 <- animals_all_combined[[c(1,2)]]
+list_challange1
+#> [[1]]
+#> [1] "kinkajous" "coatis"    "capuchins"
+list_challange2
+#> [1] "coatis"
 ```
 
-
-
-```r
-library(tidyverse)
-read_csv("survey_data.csv")
-```
+---

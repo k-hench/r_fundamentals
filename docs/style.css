@@ -11,11 +11,6 @@ body {
   background-image: linear-gradient(#fff, #ddd) !important;
 }
 
-#header {
-  line-height: 60%;
-  color: #262626;
-}
-
 pre, code {
   font-family: 'Fira Code', monospace !important;
 }
@@ -68,7 +63,7 @@ pre code {
 }
 
 .sourceCode pre {
-  background: #a6a6a6 !important;
+  background: #e0e0e0 !important;
 }
 body.hl	{ background-color:#e0eaee; }
 pre.hl	{ 
@@ -79,4 +74,28 @@ pre.hl	{
 
 section.normal {
   box-shadow: 0px 0px 7px #00000066;
+}
+
+
+a.anchor {
+  margin-left: 0px;
+  padding-right: -30px;
+  display:inline-block;
+  width: 30px;
+  height: 30px;
+  background-image: url(img/anchor.svg) !important;
+  background-repeat: no-repeat !important;
+  background-size: 20px 20px !important;
+  background-position: center bottom !important;
+  opacity: 0;
+}
+
+.hasAnchor:hover a.anchor, a.anchor:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 1144px) { /* dont show anchor link on small screens */
+  .hasAnchor:hover a.anchor {
+visibility: hidden;
+  }
 }

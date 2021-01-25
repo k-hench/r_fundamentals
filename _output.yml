@@ -10,7 +10,7 @@ bookdown::gitbook:
       before: |
         <li><a href="https://github.com/k-hench/r_fundamentals">github repository</a></li>
       after:  |
-        <img style="position:absolute; bottom:0px; left:0px; width:100%; pointer-events:none;" src="./r2d3_white.svg">
+        <img style="position:absolute; bottom:0px; left:0px; width:100%; pointer-events:none;" src="./img/menu_image.svg">
     sharing:
       facebook: no
       github: yes
